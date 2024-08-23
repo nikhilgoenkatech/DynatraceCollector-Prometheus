@@ -71,3 +71,8 @@ kubectl apply -n dynatrace-secret.yaml -n <namespace-name>
 
 kubectl apply -n dynatrace-collector.yaml -n <namespace-name>
 ```
+
+Once enabled, the Prometheus metrics will be ingested and accessible through Data-explorer/Workflow/Dashboard on Dynatrace.  
+![img](./img/mysql_exporter_metrics.jpg)
+
+![img](./img/scrapped_prom_metrics.jpg)
