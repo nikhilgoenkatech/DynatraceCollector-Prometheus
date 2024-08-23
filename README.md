@@ -1,5 +1,5 @@
 **Purpose**  
-Manifests to achieves consistent sharding of Prometheus metrics across the StatefulSet pods using Dynatrace Collector.   
+Manifests to achieve consistent sharding of Prometheus metrics across the StatefulSet pods using Dynatrace Collector.   
 
 Using Shard is recommended to achieve the outcomes:  
 1. Each metric is consistently assigned to a specific pod based on its address.  
