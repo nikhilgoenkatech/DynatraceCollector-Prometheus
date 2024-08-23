@@ -1,0 +1,113 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+data:
+  otel-collector-config.yaml: |
+    receivers:
+      prometheus:
+        config:
+          scrape_configs:
+          - job_name: 'prodeasytrade'
+            scrape_interval: 60s
+            static_configs:
+            - targets: ['mysqld-exporter:9104']
+            relabel_configs:
+              - action: hashmod
+                modulus: ${env:SHARDS}
+                source_labels:
+                  - __address__
+                target_label: __tmp_shard_id
+              - action: replace
+                replacement: ${env:POD_NAME_PREFIX}-$$1
+                source_labels:
+                  - __tmp_shard_id
+                target_label: __tmp_shard_pod_name
+              - action: keep
+                regex: ${env:POD_NAME}
+                source_labels:
+                  - __tmp_shard_pod_name
+
+    processors:
+      cumulativetodelta:
+
+    exporters:
+      otlphttp:
+        endpoint: ${env:DT_ENDPOINT}
+        headers:
+          Authorization: "Api-Token ${env:DT_API_TOKEN}"
+
+    service:
+      pipelines:
+        metrics:
+          receivers: [prometheus]
+          processors: [cumulativetodelta]
+          exporters: [otlphttp]
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dynatrace-collector
+spec:
+  serviceName: "dynatrace-collector"
+  replicas: 3
+  selector:
+    matchLabels:
+      app: dynatrace-collector
+  template:
+    metadata:
+      labels:
+        app: dynatrace-collector
+    spec:
+      containers:
+      - name: otel-collector
+        image: ghcr.io/dynatrace/dynatrace-otel-collector/dynatrace-otel-collector:latest
+        args:
+        - "--config=/conf/otel-collector-config.yaml"
+        env:
+        - name: SHARDS
+          value: "3"
+        - name: POD_NAME_PREFIX
+          value: dynatrace-collector
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: DT_ENDPOINT
+          valueFrom:
+            secretKeyRef:
+              name: dynatrace-secret
+              key: dt-endpoint
+        - name: DT_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: dynatrace-secret
+              key: dt-api-token
+        ports:
+        - containerPort: 4318 # OTLP HTTP
+        volumeMounts:
+        - name: otel-collector-config
+          mountPath: /conf
+      volumes:
+      - name: otel-collector-config
+        configMap:
+          name: otel-collector-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dynatrace-collector
+spec:
+  selector:
+    app: dynatrace-collector
+  ports:
+  - name: otlp-grpc
+    port: 4317
+    targetPort: 4317
+  - name: otlp-http
+    port: 4318
+    targetPort: 4318

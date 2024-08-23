@@ -67,7 +67,7 @@ This configuration sets up relabeling rules for the Prometheus scraper:
 
 In order to setup DynatraceCollector as StatefulSet, download the manifests and run the below commands:
 ```
-kubectl apply -n otel-collector-secret.yaml -n <namespace-name>
+kubectl apply -n dynatrace-secret.yaml -n <namespace-name>
 
-kubectl apply -n otel-collector.yaml -n <namespace-name>
+kubectl apply -n dynatrace-collector.yaml -n <namespace-name>
 ```
